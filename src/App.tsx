@@ -1,15 +1,18 @@
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import './App.css'
 import styled from "@emotion/styled";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import FullCalendar from "@fullcalendar/react";
+import './App.css';
 
 function App() {
 
   const StyleWrapper = styled.div`
-  .fc .fc-prev-button{
+  .fc-day-sat {
+    background-color: #eaf4ff;
+    color:red;
   }
-
-  .fc .fc-next-button{
+  .fc-day-sun {
+      background-color: #ffeaea;
+      color:red;
   }
   `
 
@@ -17,7 +20,9 @@ function App() {
     <StyleWrapper>
       <div>
         <FullCalendar plugins={[dayGridPlugin]} initialView="dayGridMonth"
-          headerToolbar={{ left: "prev", center: "title", right: "next" }} />
+          headerToolbar={{ left: "prev", center: "title", right: "next" }}
+        // businessHours={{ daysOfWeek: [1, 2, 3, 4, 5] }}
+        />
       </div>
     </StyleWrapper>
   )
