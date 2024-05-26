@@ -2,7 +2,7 @@ import '@fullcalendar/common/main.css';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import FullCalendar from '@fullcalendar/react';
 import { styled } from '@mui/system';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import interactionPlugin from "@fullcalendar/interaction"
 
@@ -66,12 +66,14 @@ function App() {
   const [inView, setInView] = useState(false);
   const [myEvents, setMyEvents] = useState<MyEventsType[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [newEvent, setNewEvent] = useState<MyEventsType[]>([]);
+  const [editingEvent, setEditingEvent] = useState<MyEventsType | null>(null);
 
   const handleClick = (info: any) => {
-    const event = myEvents.find(event => event.id === info.event.id);
+    const event = myEvents.find(event => event.id === parseInt(info.event.id));
     if (event) {
       setInputTitle(event.title);
+      setSelectedDate(event.start);
+      setEditingEvent(event);
       setInView(true);
     }
   };
@@ -79,26 +81,62 @@ function App() {
   const handleSelect = (selectInfo: any) => {
     setInputTitle('');
     setSelectedDate(selectInfo.startStr);
+    setEditingEvent(null);
     setInView(true);
   };
 
   const onAddEvent = () => {
     if (selectedDate) {
-      setNewEvent({
-        id: myEvents.length,
-        title: inputTitle,
-        start: selectedDate,
-      })
-
+      if (editingEvent) {
+        const updatedEvents = myEvents.map(event => event.id === editingEvent.id
+          ? { ...event, title: inputTitle, start: selectedDate }
+          : event
+        );
+        setMyEvents(updatedEvents);
+        const eventApi = ref.current?.getApi().getEventById(editingEvent.id.toString());
+        if (eventApi) {
+          eventApi.setProp('title', inputTitle);
+          eventApi.setStart(selectedDate);
+        }
+      } else {
+        const newEvent: MyEvensType = {
+          id: myEvents.length,
+          title: inputTitle,
+          start: selectedDate,
+        };
+        setMyEvents([...myEvents, newEvent]);
+        if (ref.current) {
+          ref.current.getApi().addEvent({
+            id: newEvent.id.toString(),
+            title: newEvent.title,
+            start: newEvent.start,
+          });
+        }
+      }
+      setInView(false);
     }
-
-    setMyEvents([...myEvents, newEvent]);
-
-    if (ref.current) {
-      ref.current.getApi().addEvent(newEvent);
-    }
-    setInView(false);
   };
+
+  const onDeleteEvent = () => {
+    if (editingEvent) {
+      const updatedEvents = myEvents.filter(event => event.id !== editingEvent.id);
+      setMyEvents(updatedEvents);
+      const eventApi = ref.current?.getApi().getEventById(editingEvent.id.toString());
+      if (eventApi) {
+        eventApi.remove();
+      }
+      setInView(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const events = await fetch('/api/events').then(res => res.json());
+      setMyEvents(events);
+    };
+
+    fetchEvents();
+  }, []);
 
   const coverElement = (
     <Cover
@@ -122,6 +160,7 @@ function App() {
   const btnElement = (
     <div>
       <input type="button" value="保存" onClick={onAddEvent} />
+      {editingEvent && <input type="button" value="削除" onClick={onDeleteEvent} />}
       <input
         type="button"
         value="閉じる"
